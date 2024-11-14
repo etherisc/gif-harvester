@@ -20,3 +20,14 @@ model Nft {
   modified_txHash       String
   modified_from         String
 }
+
+model Instance {
+  nftId              BigInt       @id
+  instanceAddress String
+  created_blockNumber   Int
+  created_txHash        String
+  created_from          String
+  modified_blockNumber  Int
+  modified_txHash       String
+  modified_from         String
+}
