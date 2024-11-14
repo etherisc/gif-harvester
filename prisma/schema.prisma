@@ -1,0 +1,22 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Nft {
+  nftId           BigInt       @id @default(autoincrement())
+  parentNftId     BigInt       @default(0)
+  objectType      String
+  objectAddress   String
+  owner           String
+  created_blockNumber   Int
+  created_txHash        String
+  created_from          String
+  modified_blockNumber  Int
+  modified_txHash       String
+  modified_from         String
+}

@@ -25,7 +25,9 @@
 				// "csstools.postcss",
 				// "vscodeshift.mui-snippets",
 				"mikestead.dotenv",
-				"vscode-icons-team.vscode-icons"
+				"vscode-icons-team.vscode-icons",
+				"prisma.prisma",
+				"ckolkman.vscode-postgres",
 			]
 		}
 	},

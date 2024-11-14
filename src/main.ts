@@ -6,6 +6,8 @@ import { logger } from './logger';
 import { DecodedLogEntry } from './types/logdata';
 import { Nft } from './types/nft';
 import { getObjectType, ObjectType } from './types/objecttype';
+import { notStrictEqual } from 'assert';
+import { PrismaClient } from '@prisma/client';
 
 dotenv.config();
 
@@ -17,7 +19,10 @@ BigInt.prototype.toJSON = function () {
 
 class Main {
 
-    constructor() {
+    private prisma: PrismaClient;
+
+    constructor(prisma: PrismaClient) {
+        this.prisma = prisma;
     }
 
     public async main(): Promise<void> {
@@ -32,7 +37,7 @@ class Main {
 
         let nfts = await this.processNftRegistrationEvents(nftRegistrationEvents);
         nfts = await this.processNftTransferEvents(nftTransferEvents, nfts);
-
+        await this.persistNfts(nfts);
         
         // print one log per event
         nfts.forEach(event => {
@@ -43,6 +48,36 @@ class Main {
         // const latestBaseBlock = latestBlockDataRows[0]._col0;
 
         // logger.info(`Latest block: ${latestBaseBlock}`);
+    }
+
+    async persistNfts(nfts: Nft[]): Promise<void> {
+        for (const nft of nfts) {
+            await this.prisma.nft.upsert({
+                where: { nftId: nft.nftId as bigint },
+                update: {
+                    parentNftId: nft.parentNftId as bigint,
+                    objectType: ObjectType[nft.objectType],
+                    objectAddress: nft.objectAddress,
+                    owner: nft.owner,
+                    modified_blockNumber: nft.modified.blockNumber,
+                    modified_txHash: nft.modified.txHash,
+                    modified_from: nft.modified.from
+                },
+                create: {
+                    nftId: nft.nftId as bigint,
+                    parentNftId: nft.parentNftId as bigint,
+                    objectType: ObjectType[nft.objectType],
+                    objectAddress: nft.objectAddress,
+                    owner: nft.owner,
+                    created_blockNumber: nft.created.blockNumber,
+                    created_txHash: nft.created.txHash,
+                    created_from: nft.created.from,
+                    modified_blockNumber: nft.modified.blockNumber,
+                    modified_txHash: nft.modified.txHash,
+                    modified_from: nft.modified.from
+                }
+            });
+        }
     }
 
     async processNftRegistrationEvents(nftRegistrationEvents: Array<DecodedLogEntry>): Promise<Array<Nft>> {
@@ -217,4 +252,9 @@ class Main {
 
 }
 
-new Main().main();
+const prisma = new PrismaClient()
+try {
+    new Main(prisma).main();
+} finally {
+    prisma.$disconnect();
+}
