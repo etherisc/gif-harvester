@@ -8,17 +8,17 @@ export interface Policy {
     sumInsuredAmount: BigInt;
     premiumAmount: BigInt;
     premiumPaid: BigInt;
-    lifetime: number;
-    activateAt: number | null;
+    lifetime: BigInt;
+    activateAt: BigInt | null;
     created: {
         blockNumber: number;
-        timestamp: number;
+        timestamp: BigInt;
         txHash: string;
         from: string;
     }
     modified: {
         blockNumber: number;
-        timestamp: number;
+        timestamp: BigInt;
         txHash: string;
         from: string;
     }

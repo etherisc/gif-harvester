@@ -38,6 +38,10 @@ class Main {
         const gifEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_GIF_EVENTS, 0);
         const { nfts, instances, policies } = await this.parseGifEvents(gifEvents);
 
+        await this.nftProcessor.persistNfts(Array.from(nfts.values()));
+        await this.instanceProcessor.persistInstances(Array.from(instances.values()));
+        await this.policyProcessor.persistPolicies(Array.from(policies.values()));
+
         for (const nft of nfts.values()) {
             logger.info(`NFT: ${nft.nftId} - ${ObjectType[nft.objectType]} - ${nft.objectAddress} - ${nft.owner}`);
         };

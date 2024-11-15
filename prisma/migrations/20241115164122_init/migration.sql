@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Policy" ALTER COLUMN "lifetime" SET DATA TYPE BIGINT,
+ALTER COLUMN "activateAt" SET DATA TYPE BIGINT;

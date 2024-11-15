@@ -15,33 +15,45 @@ export default class PolicyProcessor {
     }
 
     async persistPolicies(policies: Policy[]): Promise<void> {
-        // for (const nft of nfts) {
-        //     await this.prisma.nft.upsert({
-        //         where: { nftId: nft.nftId as bigint },
-        //         update: {
-        //             // parentNftId: nft.parentNftId as bigint,
-        //             // objectType: ObjectType[nft.objectType],
-        //             // objectAddress: nft.objectAddress,
-        //             // owner: nft.owner,
-        //             // modified_blockNumber: nft.modified.blockNumber,
-        //             // modified_txHash: nft.modified.txHash,
-        //             // modified_from: nft.modified.from
-        //         },
-        //         create: {
-        //             nftId: nft.nftId as bigint,
-        //             parentNftId: nft.parentNftId as bigint,
-        //             objectType: ObjectType[nft.objectType],
-        //             objectAddress: nft.objectAddress,
-        //             owner: nft.owner,
-        //             created_blockNumber: nft.created.blockNumber,
-        //             created_txHash: nft.created.txHash,
-        //             created_from: nft.created.from,
-        //             modified_blockNumber: nft.modified.blockNumber,
-        //             modified_txHash: nft.modified.txHash,
-        //             modified_from: nft.modified.from
-        //         }
-        //     });
-        // }
+        for (const policy of policies) {
+            await this.prisma.policy.upsert({
+                where: { nftId: policy.nftId as bigint },
+                update: {
+                    productNftId: policy.productNftId as bigint,
+                    bundleNftId: policy.bundleNftId as bigint,
+                    riskId: policy.riskId,
+                    referralId: policy.referralId ?? '',
+                    sumInsuredAmount: policy.sumInsuredAmount as bigint,
+                    premiumAmount: policy.premiumAmount as bigint,
+                    premiumPaid: policy.premiumPaid as bigint,
+                    lifetime: policy.lifetime as bigint,
+                    activateAt: (policy.activateAt ?? BigInt(-1)) as bigint,
+                    modified_blockNumber: policy.modified.blockNumber,
+                    modified_txHash: policy.modified.txHash,
+                    modified_from: policy.modified.from
+                },
+                create: {
+                    nftId: policy.nftId as bigint,
+                    productNftId: policy.productNftId as bigint,
+                    bundleNftId: policy.bundleNftId as bigint,
+                    riskId: policy.riskId,
+                    referralId: policy.referralId ?? '',
+                    sumInsuredAmount: policy.sumInsuredAmount as bigint,
+                    premiumAmount: policy.premiumAmount as bigint,
+                    premiumPaid: policy.premiumPaid as bigint,
+                    lifetime: policy.lifetime as bigint,
+                    activateAt: (policy.activateAt ?? BigInt(-1)) as bigint,
+                    created_blockNumber: policy.created.blockNumber,
+                    created_timestamp: policy.created.timestamp as bigint,
+                    created_txHash: policy.created.txHash,
+                    created_from: policy.created.from,
+                    modified_blockNumber: policy.modified.blockNumber,
+                    modified_timestamp: policy.modified.timestamp as bigint,
+                    modified_txHash: policy.modified.txHash,
+                    modified_from: policy.modified.from
+                }
+            });
+        }
     }
 
     async processApplicationCreatedEvent(event: DecodedLogEntry, policies: Map<BigInt, Policy>): Promise<Map<BigInt, Policy>> {
@@ -66,7 +78,7 @@ export default class PolicyProcessor {
         const referralId = data.args[4] as string;
         const sumInsuredAmount = data.args[6] as BigInt;
         const premiumAmount = data.args[7] as BigInt;
-        const lifetime = data.args[8] as number;
+        const lifetime = data.args[8] as BigInt;
         
         const policy = {
             nftId,
@@ -81,13 +93,13 @@ export default class PolicyProcessor {
             activateAt: null,
             created: {
                 blockNumber: event.block_number,
-                timestamp: new Date(event.block_time).getTime(),
+                timestamp: BigInt(new Date(event.block_time).getTime()),
                 txHash: event.tx_hash,
                 from: event.tx_from
             },
             modified: {
                 blockNumber: event.block_number,
-                timestamp: new Date(event.block_time).getTime(),
+                timestamp: BigInt(new Date(event.block_time).getTime()),
                 txHash: event.tx_hash,
                 from: event.tx_from
             }
@@ -116,7 +128,7 @@ export default class PolicyProcessor {
 
         const nftId = data.args[0] as BigInt;
         const premiumAmount = data.args[1] as BigInt;
-        const activateAt = data.args[2] as number;
+        const activateAt = data.args[2] as BigInt;
         
         const policy = policies.get(nftId);
 
@@ -129,7 +141,7 @@ export default class PolicyProcessor {
         policy.activateAt = activateAt;
         policy.modified = {
             blockNumber: event.block_number,
-            timestamp: new Date(event.block_time).getTime(),
+            timestamp: BigInt(new Date(event.block_time).getTime()),
             txHash: event.tx_hash,
             from: event.tx_from
         };
@@ -167,7 +179,7 @@ export default class PolicyProcessor {
         policy.premiumPaid = premiumPaid;
         policy.modified = {
             blockNumber: event.block_number,
-            timestamp: new Date(event.block_time).getTime(),
+            timestamp: BigInt(new Date(event.block_time).getTime()),
             txHash: event.tx_hash,
             from: event.tx_from
         };
