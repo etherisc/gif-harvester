@@ -28,33 +28,19 @@ class Main {
         this.dune = new DuneApi();
         this.nftProcessor = new NftProcessor(prisma);
         this.instanceProcessor = new InstanceProcessor(prisma);
-
     }
 
     public async main(): Promise<void> {
         const gifEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_GIF_EVENTS, 0);
         const { nfts, instances } = await this.parseGifEvents(gifEvents);
-        // const nftTransferEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_NFT_TRANSFER_EVENTS, 0);
 
-        // let nfts = await this.nftProcessor.processNftRegistrationEvents(nftRegistrationEvents);
-        // nfts = await this.nftProcessor.processNftTransferEvents(nftTransferEvents, nfts);
-        // await this.nftProcessor.persistNfts(nfts);
-
-        // // print one log per event
-        const nftIterator = nfts.values();
-
-        for (const nft of nftIterator) {
+        for (const nft of nfts.values()) {
             logger.info(`NFT: ${nft.nftId} - ${ObjectType[nft.objectType]} - ${nft.objectAddress} - ${nft.owner}`);
         };
 
-        // const instanceEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_INSTANCE_SERVICE_EVENTS, 0);
-        // const instances = await this.instanceProcessor.processInstanceServiceEvents(instanceEvents);
-        // await this.instanceProcessor.persistInstances(instances);
-
-        // print one log per event
-        // instances.forEach(event => {
-        //     logger.info(`Instance: ${event.nftId} - ${event.instanceAddress}`);
-        // });
+        for (const instance of instances.values()) {
+            logger.info(`Instance: ${instance.nftId} - ${instance.instanceAddress}`);
+        }
     }
 
     async parseGifEvents(gifEvents: Array<DecodedLogEntry>)
@@ -74,9 +60,9 @@ class Main {
                 case 'LogRegistryObjectRegistered':
                     await this.nftProcessor.processNftRegistrationEvent(event, nfts);
                     break;
-            //     // Transfer
-            //     // LogRegistryObjectRegistered
-            //     // LogInstanceServiceInstanceCreated
+                case 'LogInstanceServiceInstanceCreated':
+                    await this.instanceProcessor.processInstanceServiceEvent(event, instances);
+                    break;
             //     // LogApplicationServiceApplicationCreated
             //     // LogPolicyServicePolicyCreated
             //     // LogPolicyServicePolicyPremiumCollected

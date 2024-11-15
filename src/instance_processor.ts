@@ -35,36 +35,41 @@ export default class InstanceProcessor {
         }
     }
 
-    async processInstanceServiceEvents(instanceEvents: Array<DecodedLogEntry>): Promise<Array<Instance>> {
-        return instanceEvents.map(event => {
-            logger.info(`Processing instance service event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
-            const data = this.decodeIInstanceServiceEvent(event);
-            if (data === null || data === undefined) {
-                logger.error(`Failed to decode event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
-                return null as unknown as Instance;
-            }
-            if (data.name !== 'LogInstanceServiceInstanceCreated') {
-                return null as unknown as Instance;
-            }
+    async processInstanceServiceEvent(event: DecodedLogEntry, instances: Map<BigInt, Instance>): Promise<Map<BigInt, Instance>> {
+        if (event.event_name !== 'LogInstanceServiceInstanceCreated') {
+            throw new Error(`Invalid event type ${event.event_name}`);
+        }
 
-            logger.debug(`args: ${JSON.stringify(data.args)}`);
-            const nftId = data.args[0] as BigInt;
-            const instanceAddress = data.args[1] as string;
-            return {
-                nftId,
-                instanceAddress,
-                created: {
-                    blockNumber: event.block_number,
-                    txHash: event.tx_hash,
-                    from: event.tx_from
-                },
-                modified: {
-                    blockNumber: event.block_number,
-                    txHash: event.tx_hash,
-                    from: event.tx_from
-                }
-            } as Instance;
-        }).filter(event => event !== null);
+        logger.debug(`Processing instance service instance created event`);
+
+        const data = this.decodeIInstanceServiceEvent(event);
+        if (data === null || data === undefined) {
+            logger.error(`Failed to decode event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+            return instances;
+        }
+        if (data.name !== 'LogInstanceServiceInstanceCreated') {
+            throw new Error(`Invalid event name ${data.name}`);
+        }
+
+        logger.debug(`args: ${JSON.stringify(data.args)}`);
+        const nftId = data.args[0] as BigInt;
+        const instanceAddress = data.args[1] as string;
+        const instance = {
+            nftId,
+            instanceAddress,
+            created: {
+                blockNumber: event.block_number,
+                txHash: event.tx_hash,
+                from: event.tx_from
+            },
+            modified: {
+                blockNumber: event.block_number,
+                txHash: event.tx_hash,
+                from: event.tx_from
+            }
+        } as Instance;
+        instances.set(nftId, instance);
+        return instances;
     }
 
     
