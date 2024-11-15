@@ -36,7 +36,7 @@ export enum ObjectType {
 }
 
 export function getObjectType(type: BigInt): ObjectType {
-    logger.debug(`getObjectType(${type})`);
+    // logger.debug(`getObjectType(${type})`);
     switch (type) {
         case BigInt(0):
             return ObjectType.UNKNOWN;
