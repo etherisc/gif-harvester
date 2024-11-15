@@ -92,9 +92,16 @@ export default class DuneApi {
             if (totalRowCount === 0) {
                 totalRowCount = response.data.result.metadata.total_row_count;
             }
+            const rowCount = response.data.result.metadata.row_count;
+            if (rowCount === 0) {
+                break;
+            }
+            if (rowCount !== response.data.result.rows.length) {
+                throw new Error(`Row count mismatch expected: ${rowCount} effective: ${response.data.result.rows.length}`);
+            }
             rows.push(...response.data.result.rows);
             offset += limit;
-        } while (totalRowCount > 0 && offset * limit < totalRowCount)
+        } while (totalRowCount > 0 && offset < totalRowCount)
 
         logger.info(`Fetched ${rows.length} rows`);
 

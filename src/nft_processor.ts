@@ -4,6 +4,7 @@ import { logger } from "./logger";
 import { IRegistry__factory } from "./generated/contracts/gif";
 import { DecodedLogEntry } from "./types/logdata";
 import { Nft } from "./types/nft";
+import { log } from "console";
 
 export default class NftProcessor {
     private prisma: PrismaClient;
@@ -42,25 +43,76 @@ export default class NftProcessor {
         }
     }
 
-    async processNftRegistrationEvents(nftRegistrationEvents: Array<DecodedLogEntry>): Promise<Array<Nft>> {
-        return nftRegistrationEvents.map(event => {
-            logger.info(`Processing nft registration event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
-            const data = this.decodeLogRegistryObjectRegisteredEvent(event);
-            if (data === null || data === undefined) {
-                logger.error(`Failed to decode event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
-                return null as unknown as Nft;
+    async processNftRegistrationEvent(event: DecodedLogEntry, nfts: Map<BigInt, Nft>): Promise<Map<BigInt, Nft>> {
+        if (event.event_name !== 'LogRegistryObjectRegistered') {
+            throw new Error(`Invalid event type ${event.event_name}`);
+        }
+
+        logger.info(`Processing nft registration event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+        const data = this.decodeLogRegistryObjectRegisteredEvent(event);
+        if (data === null || data === undefined) {
+            logger.error(`Failed to decode event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+            return nfts;
+        }
+
+        const nftId = data.args[0] as BigInt;
+        const parentNftId = data.args[1] as BigInt;
+        const objectType = getObjectType(BigInt(data.args[2]));
+        const objectAddress = data.args[4] as string;
+        const owner = data.args[5] as string;
+        const nft = {
+            nftId,
+            parentNftId,
+            objectType: objectType,
+            objectAddress: objectAddress,
+            owner: owner,
+            created: {
+                blockNumber: event.block_number,
+                txHash: event.tx_hash,
+                from: event.tx_from
+            },
+            modified: {
+                blockNumber: event.block_number,
+                txHash: event.tx_hash,
+                from: event.tx_from
             }
-            const nftId = data.args[0] as BigInt;
-            const parentNftId = data.args[1] as BigInt;
-            const objectType = getObjectType(BigInt(data.args[2]));
-            const objectAddress = data.args[4] as string;
-            const owner = data.args[5] as string;
-            return {
+        } as Nft;
+        nfts.set(nftId, nft);
+        return nfts;
+    }
+
+    async processNftTransferEvent(event: DecodedLogEntry, nfts: Map<BigInt, Nft>): Promise<Map<BigInt, Nft>> {
+        if (event.event_name !== 'Transfer') {
+            throw new Error(`Invalid event type ${event.event_name}`);
+        }
+
+        const from = `0x${event.topic1.substring(26)}`;
+        const to = `0x${event.topic2.substring(26)}`;
+        const nftId = BigInt(event.topic3);
+        
+        if (nfts.has(nftId) && from === '0x0000000000000000000000000000000000000000') {
+            logger.debug(`Initial nft event transfer ${nftId}`);
+        } else if (nfts.has(nftId)) {
+            logger.debug(`Transfer event from known nft ${nftId} from ${from} to ${to}`);
+            const nft = nfts.get(nftId);
+            if (nft === undefined) {
+                logger.error(`NFT ${nftId} not found for update`);
+                return nfts;
+            }
+            nft.owner = to;
+            nft.modified = {
+                blockNumber: event.block_number,
+                txHash: event.tx_hash,
+                from: event.tx_from
+            };
+        } else {
+            logger.debug(`Transfer event from unknown nft ${nftId} from ${from} to ${to}`);
+            const nft = {
                 nftId,
-                parentNftId,
-                objectType: objectType,
-                objectAddress: objectAddress,
-                owner: owner,
+                parentNftId: BigInt(0),
+                objectType: ObjectType.UNKNOWN,
+                objectAddress: '',
+                owner: to,
                 created: {
                     blockNumber: event.block_number,
                     txHash: event.tx_hash,
@@ -71,36 +123,9 @@ export default class NftProcessor {
                     txHash: event.tx_hash,
                     from: event.tx_from
                 }
-            } as Nft;
-        }).filter(event => event !== null);
-    }
-
-    async processNftTransferEvents(nftTransferEvents: Array<DecodedLogEntry>, nfts: Array<Nft>): Promise<Array<Nft>> {
-        nftTransferEvents.forEach(event => {
-            logger.debug(`Processing nft transfer event ${event.tx_hash} - ${event.event_name} - ${event.topic0} - ${event.topic1} - ${event.topic2} - ${event.topic3} - ${event.data}`);
-            // extract addresses
-            const from = `0x${event.topic1.substring(26)}`;
-            const to = `0x${event.topic2.substring(26)}`;
-            const nftId = BigInt(event.topic3);
-            // logger.debug(`Transfer from ${from} to ${to} for NFT ${nftId}`);
-
-            if (from === '0x0000000000000000000000000000000000000000') {
-                return;
-            }
-
-            const nft = nfts.find(nft => nft.nftId === nftId);
-            if (nft === undefined) {
-                logger.error(`NFT ${nftId} not found`);
-                return;
-            }
-            nft.owner = to;
-            nft.modified = {
-                blockNumber: event.block_number,
-                txHash: event.tx_hash,
-                from: event.tx_from
             };
-            logger.debug(`Transfer NFT ${nftId} from ${from} to ${to}`);
-        });
+            nfts.set(nftId, nft);
+        }
         return nfts;
     }
 

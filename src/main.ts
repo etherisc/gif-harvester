@@ -1,12 +1,17 @@
 import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import * as dotenv from 'dotenv';
-import { DUNE_API_BASE_URL, DUNE_API_KEY, DUNE_QUERY_ID_INSTANCE_SERVICE_EVENTS, DUNE_QUERY_ID_NFT_REGISTRATION_EVENTS, DUNE_QUERY_ID_NFT_TRANSFER_EVENTS } from './constants';
+import { DUNE_API_BASE_URL, DUNE_API_KEY, DUNE_QUERY_ID_GIF_EVENTS, DUNE_QUERY_ID_INSTANCE_SERVICE_EVENTS, DUNE_QUERY_ID_NFT_REGISTRATION_EVENTS, DUNE_QUERY_ID_NFT_TRANSFER_EVENTS } from './constants';
 import InstanceProcessor from './instance_processor';
 import { logger } from './logger';
 import NftProcessor from './nft_processor';
 import { ObjectType } from './types/objecttype';
 import DuneApi from './dune';
+import { DecodedLogEntry } from './types/logdata';
+import { Nft } from './types/nft';
+import { Instance } from './types/instance';
+import PolicyProcessor from './policy_processor';
+import { Policy } from './types/policy';
 
 dotenv.config();
 
@@ -20,37 +25,70 @@ class Main {
     private dune: DuneApi;
     private nftProcessor: NftProcessor;
     private instanceProcessor: InstanceProcessor;
+    private policyProcessor: PolicyProcessor;
 
     constructor(prisma: PrismaClient) {
         this.dune = new DuneApi();
         this.nftProcessor = new NftProcessor(prisma);
         this.instanceProcessor = new InstanceProcessor(prisma);
-
+        this.policyProcessor = new PolicyProcessor(prisma);
     }
 
     public async main(): Promise<void> {
-        const nftRegistrationEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_NFT_REGISTRATION_EVENTS, 0);
-        const nftTransferEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_NFT_TRANSFER_EVENTS, 0);
+        const gifEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_GIF_EVENTS, 0);
+        const { nfts, instances, policies } = await this.parseGifEvents(gifEvents);
 
-        let nfts = await this.nftProcessor.processNftRegistrationEvents(nftRegistrationEvents);
-        nfts = await this.nftProcessor.processNftTransferEvents(nftTransferEvents, nfts);
-        await this.nftProcessor.persistNfts(nfts);
+        await this.nftProcessor.persistNfts(Array.from(nfts.values()));
+        await this.instanceProcessor.persistInstances(Array.from(instances.values()));
+        await this.policyProcessor.persistPolicies(Array.from(policies.values()));
 
-        // print one log per event
-        nfts.forEach(event => {
-            logger.info(`NFT: ${event.nftId} - ${ObjectType[event.objectType]} - ${event.objectAddress} - ${event.owner}`);
-        });
+        for (const nft of nfts.values()) {
+            logger.info(`NFT: ${nft.nftId} - ${ObjectType[nft.objectType]} - ${nft.objectAddress} - ${nft.owner}`);
+        };
 
-        const instanceEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_INSTANCE_SERVICE_EVENTS, 0);
-        const instances = await this.instanceProcessor.processInstanceServiceEvents(instanceEvents);
-        await this.instanceProcessor.persistInstances(instances);
+        for (const instance of instances.values()) {
+            logger.info(`Instance: ${instance.nftId} - ${instance.instanceAddress}`);
+        }
 
-        // print one log per event
-        instances.forEach(event => {
-            logger.info(`Instance: ${event.nftId} - ${event.instanceAddress}`);
-        });
+        for (const policy of policies.values()) {
+            logger.info(`Policy: ${policy.nftId} - ${policy.riskId} - ${policy.sumInsuredAmount}`);
+        }
     }
 
+    async parseGifEvents(gifEvents: Array<DecodedLogEntry>)
+        : Promise<{ nfts: Map<BigInt, Nft>, instances: Map<BigInt, Instance>, policies: Map<BigInt, Policy> }> 
+    {
+        const nfts = new Map<BigInt, Nft>();
+        const instances = new Map<BigInt, Instance>();
+        const policies = new Map<BigInt, Policy>();
+
+        for (const event of gifEvents) {
+            // logger.debug(`Processing gif event ${event.tx_hash} - ${event.block_number} - ${event.event_name}`);
+
+            switch (event.event_name) {
+                case 'Transfer': 
+                    await this.nftProcessor.processNftTransferEvent(event, nfts);
+                    break;
+                case 'LogRegistryObjectRegistered':
+                    await this.nftProcessor.processNftRegistrationEvent(event, nfts);
+                    break;
+                case 'LogInstanceServiceInstanceCreated':
+                    await this.instanceProcessor.processInstanceServiceEvent(event, instances);
+                    break;
+                case 'LogApplicationServiceApplicationCreated':
+                    await this.policyProcessor.processApplicationCreatedEvent(event, policies);
+                    break;
+                case 'LogPolicyServicePolicyCreated':
+                    await this.policyProcessor.processPolicyCreatedEvent(event, policies);
+                    break;
+                case 'LogPolicyServicePolicyPremiumCollected':
+                    await this.policyProcessor.processPolicyPremiumCollectedEvent(event, policies);
+                    break;
+            }
+        }
+
+        return { nfts, instances, policies };
+    }
 }
 
 const prisma = new PrismaClient()
