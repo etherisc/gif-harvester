@@ -10,6 +10,8 @@ export interface Policy {
     premiumPaid: BigInt;
     lifetime: BigInt;
     activateAt: BigInt | null;
+    expirationAt: BigInt | null;
+    closed: boolean;
     created: {
         blockNumber: number;
         timestamp: BigInt;

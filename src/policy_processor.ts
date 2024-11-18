@@ -28,6 +28,8 @@ export default class PolicyProcessor {
                     premiumPaid: policy.premiumPaid as bigint,
                     lifetime: policy.lifetime as bigint,
                     activateAt: (policy.activateAt ?? BigInt(-1)) as bigint,
+                    expirationAt: (policy.expirationAt as bigint) ?? null,
+                    closed: policy.closed,
                     modified_blockNumber: policy.modified.blockNumber,
                     modified_txHash: policy.modified.txHash,
                     modified_from: policy.modified.from
@@ -43,6 +45,8 @@ export default class PolicyProcessor {
                     premiumPaid: policy.premiumPaid as bigint,
                     lifetime: policy.lifetime as bigint,
                     activateAt: (policy.activateAt ?? BigInt(-1)) as bigint,
+                    expirationAt: (policy.expirationAt as bigint) ?? null,
+                    closed: policy.closed,
                     created_blockNumber: policy.created.blockNumber,
                     created_timestamp: policy.created.timestamp as bigint,
                     created_txHash: policy.created.txHash,
@@ -91,6 +95,8 @@ export default class PolicyProcessor {
             premiumPaid: BigInt(0),
             lifetime,
             activateAt: null,
+            expirationAt: null,
+            closed: false,
             created: {
                 blockNumber: event.block_number,
                 timestamp: BigInt(new Date(event.block_time).getTime()),
@@ -185,6 +191,81 @@ export default class PolicyProcessor {
         };
 
         logger.info(`PolicyPremiumCollected event: ${policy.nftId} - ${policy.premiumPaid}`);
+
+        return policies;
+    }
+
+    async processPolicyExpirationUpdatedEvent(event: DecodedLogEntry, policies: Map<BigInt, Policy>): Promise<Map<BigInt, Policy>> {
+        if (event.event_name !== 'LogPolicyServicePolicyExpirationUpdated') {
+            throw new Error(`Invalid event type ${event.event_name}`);
+        }
+
+        logger.debug(`Processing policy expiration updated event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+        const data = this.decodePolicyServiceEvent(event);
+        if (data === null || data === undefined) {
+            logger.error(`Failed to decode event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+            return policies;
+        }
+        if (data.name !== 'LogPolicyServicePolicyExpirationUpdated') {
+            throw new Error(`Invalid event name ${data.name}`);
+        }
+
+        const nftId = data.args[0] as BigInt;
+        const expirationAt = data.args[1] as BigInt;
+        
+        const policy = policies.get(nftId);
+
+        if (policy === undefined) {
+            logger.error(`Policy not found for nftId ${nftId}`);
+            return policies;
+        }
+
+        policy.expirationAt = expirationAt;
+        policy.modified = {
+            blockNumber: event.block_number,
+            timestamp: BigInt(new Date(event.block_time).getTime()),
+            txHash: event.tx_hash,
+            from: event.tx_from
+        };
+
+        logger.info(`PolicyExpirationUpdated event: ${policy.nftId} - ${policy.activateAt}`);
+
+        return policies;
+    }
+
+    async processPolicyClosedEvent(event: DecodedLogEntry, policies: Map<BigInt, Policy>): Promise<Map<BigInt, Policy>> {
+        if (event.event_name !== 'LogPolicyServicePolicyClosed') {
+            throw new Error(`Invalid event type ${event.event_name}`);
+        }
+
+        logger.debug(`Processing policy closed event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+        const data = this.decodePolicyServiceEvent(event);
+        if (data === null || data === undefined) {
+            logger.error(`Failed to decode event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+            return policies;
+        }
+        if (data.name !== 'LogPolicyServicePolicyClosed') {
+            throw new Error(`Invalid event name ${data.name}`);
+        }
+
+        const nftId = data.args[0] as BigInt;
+        
+        const policy = policies.get(nftId);
+
+        if (policy === undefined) {
+            logger.error(`Policy not found for nftId ${nftId}`);
+            return policies;
+        }
+        
+        policy.closed = true;
+        policy.modified = {
+            blockNumber: event.block_number,
+            timestamp: BigInt(new Date(event.block_time).getTime()),
+            txHash: event.tx_hash,
+            from: event.tx_from
+        };
+
+        logger.info(`PolicyClosed event: ${policy.nftId}`);
 
         return policies;
     }

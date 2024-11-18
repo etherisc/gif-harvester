@@ -84,6 +84,12 @@ class Main {
                 case 'LogPolicyServicePolicyPremiumCollected':
                     await this.policyProcessor.processPolicyPremiumCollectedEvent(event, policies);
                     break;
+                case 'LogPolicyServicePolicyExpirationUpdated':
+                    await this.policyProcessor.processPolicyExpirationUpdatedEvent(event, policies);
+                    break;
+                case 'LogPolicyServicePolicyClosed':
+                    await this.policyProcessor.processPolicyClosedEvent(event, policies);
+                    break;
             }
         }
 

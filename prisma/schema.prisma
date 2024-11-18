@@ -43,6 +43,8 @@ model Policy {
   premiumPaid        BigInt
   lifetime           BigInt
   activateAt         BigInt
+  expirationAt       BigInt?
+  closed             Boolean      @default(false)
   created_blockNumber   Int
   created_timestamp     BigInt
   created_txHash        String
