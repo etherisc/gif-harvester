@@ -14,6 +14,8 @@ import PolicyProcessor from './policy_processor';
 import { Policy } from './types/policy';
 import ComponentProcessor from './component_processor';
 import { Component } from './types/component';
+import RiskProcessor from './risk_processor';
+import { Risk } from './types/risk';
 
 dotenv.config();
 
@@ -29,6 +31,7 @@ class Main {
     private instanceProcessor: InstanceProcessor;
     private policyProcessor: PolicyProcessor;
     private componentProcessor: ComponentProcessor;
+    private riskProcessor: RiskProcessor;
 
     constructor(prisma: PrismaClient) {
         this.dune = new DuneApi();
@@ -36,16 +39,18 @@ class Main {
         this.instanceProcessor = new InstanceProcessor(prisma);
         this.componentProcessor = new ComponentProcessor(prisma);
         this.policyProcessor = new PolicyProcessor(prisma);
+        this.riskProcessor = new RiskProcessor(prisma);
     }
 
     public async main(): Promise<void> {
         const gifEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_GIF_EVENTS, 0);
-        const { nfts, instances, policies, components } = await this.parseGifEvents(gifEvents);
+        const { nfts, instances, policies, components, risks } = await this.parseGifEvents(gifEvents);
 
         await this.nftProcessor.persistNfts(Array.from(nfts.values()));
         await this.instanceProcessor.persistInstances(Array.from(instances.values()));
         await this.policyProcessor.persistPolicies(Array.from(policies.values()));
         await this.componentProcessor.persistComponents(Array.from(components.values()));
+        await this.riskProcessor.persistRisks(Array.from(risks.values()));
 
         for (const nft of nfts.values()) {
             logger.info(`NFT: ${nft.nftId} - ${ObjectType[nft.objectType]} - ${nft.objectAddress} - ${nft.owner}`);
@@ -65,12 +70,14 @@ class Main {
             nfts: Map<BigInt, Nft>, 
             instances: Map<BigInt, Instance>, 
             policies: Map<BigInt, Policy>,
-            components: Map<BigInt, Component>
+            components: Map<BigInt, Component>,
+            risks: Map<string, Risk>,
         }> 
     {
         const nfts = new Map<BigInt, Nft>();
         const instances = new Map<BigInt, Instance>();
         const components = new Map<BigInt, Component>();
+        const risks = new Map<string, Risk>();
         const policies = new Map<BigInt, Policy>();
 
         for (const event of gifEvents) {
@@ -88,7 +95,14 @@ class Main {
                     break;
                 case 'LogComponentServiceRegistered':
                     await this.componentProcessor.processComponentRegisteredEvent(event, components);
-                    break;    
+                    break;
+                case 'LogRiskServiceRiskCreated':
+                    await this.riskProcessor.processRiskCreatedEvent(event, risks);
+                    break;
+                // TODO: LogRiskServiceRiskUpdated
+                // TODO: LogRiskServiceRiskLocked
+                // TODO: LogRiskServiceRiskUnlocked
+                // TODO: LogRiskServiceRiskClosed
                 case 'LogApplicationServiceApplicationCreated':
                     await this.policyProcessor.processApplicationCreatedEvent(event, policies);
                     break;
@@ -110,7 +124,7 @@ class Main {
             }
         }
 
-        return { nfts, instances, policies, components };
+        return { nfts, instances, policies, components, risks };
     }
 }
 

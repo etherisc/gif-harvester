@@ -69,3 +69,21 @@ model Component {
   modified_txHash       String
   modified_from         String
 }
+
+model Risk {
+  productNftId          BigInt
+  riskId                String
+  locked                Boolean      @default(false)
+  closed                Boolean      @default(false)
+  created_blockNumber   Int
+  created_timestamp     BigInt
+  created_txHash        String
+  created_from          String
+  modified_blockNumber  Int
+  modified_timestamp    BigInt
+  modified_txHash       String
+  modified_from         String
+
+  // compound primary key
+  @@id([productNftId, riskId])
+}
