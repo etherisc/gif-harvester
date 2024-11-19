@@ -90,6 +90,9 @@ class Main {
                 case 'LogPolicyServicePolicyClosed':
                     await this.policyProcessor.processPolicyClosedEvent(event, policies);
                     break;
+
+                default:
+                    logger.info('Unhandeled event: ' + event.event_name);
             }
         }
 
