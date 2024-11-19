@@ -5,6 +5,7 @@
   "main": "main.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "migrateDev": "prisma migrate dev --name=init",
     "dev": "ts-node-dev src/main.ts",
     "build": " tsc --project tsconfig.json",
     "postinstall": "$npm_execpath run typechainGif",
