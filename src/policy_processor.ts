@@ -31,6 +31,7 @@ export default class PolicyProcessor {
                     expirationAt: (policy.expirationAt as bigint) ?? null,
                     closed: policy.closed,
                     modified_blockNumber: policy.modified.blockNumber,
+                    modified_timestamp: policy.modified.timestamp as bigint,
                     modified_txHash: policy.modified.txHash,
                     modified_from: policy.modified.from
                 },

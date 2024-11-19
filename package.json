@@ -8,7 +8,7 @@
     "dev": "ts-node-dev src/main.ts",
     "build": " tsc --project tsconfig.json",
     "postinstall": "$npm_execpath run typechainGif",
-    "typechainGif": "D=./node_modules/@etherisc/gif-next/artifacts/contracts/ && typechain --target ethers-v6 --out-dir src/generated/contracts/gif $D/product/IApplicationService.sol/IApplicationService.json $D/product/IPolicyService.sol/IPolicyService.json $D/pool/IPoolService.sol/IPoolService.json $D/pool/IBundleService.sol/IBundleService.json $D/oracle/IOracleService.sol/IOracleService.json $D/registry/ChainNft.sol/ChainNft.json $D/registry/IRegistry.sol/IRegistry.json $D/instance/IInstance.sol/IInstance.json $D/instance/IInstanceService.sol/IInstanceService.json  $D/instance/InstanceReader.sol/InstanceReader.json $D/instance/module/IPolicy.sol/IPolicy.json $D/instance/module/IRisk.sol/IRisk.json"
+    "typechainGif": "D=./node_modules/@etherisc/gif-next/artifacts/contracts/ && typechain --target ethers-v6 --out-dir src/generated/contracts/gif $D/product/IApplicationService.sol/IApplicationService.json $D/product/IPolicyService.sol/IPolicyService.json $D/pool/IPoolService.sol/IPoolService.json $D/pool/IBundleService.sol/IBundleService.json $D/oracle/IOracleService.sol/IOracleService.json $D/registry/ChainNft.sol/ChainNft.json $D/registry/IRegistry.sol/IRegistry.json $D/instance/IInstance.sol/IInstance.json $D/instance/IInstanceService.sol/IInstanceService.json  $D/instance/InstanceReader.sol/InstanceReader.json $D/instance/module/IPolicy.sol/IPolicy.json $D/instance/module/IRisk.sol/IRisk.json $D/shared/IComponentService.sol/IComponentService.json" 
   },
   "author": "",
   "license": "Apache-2.0",
