@@ -54,3 +54,18 @@ model Policy {
   modified_txHash       String
   modified_from         String
 }
+
+model Component {
+  nftId                 BigInt       @id
+  instanceNftId         BigInt
+  componentType         String
+  token                 String
+  created_blockNumber   Int
+  created_timestamp     BigInt
+  created_txHash        String
+  created_from          String
+  modified_blockNumber  Int
+  modified_timestamp    BigInt
+  modified_txHash       String
+  modified_from         String
+}
