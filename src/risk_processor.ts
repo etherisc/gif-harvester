@@ -73,12 +73,159 @@ export default class RiskProcessor {
             },
             modified: {
                 blockNumber: event.block_number,
-                timestamp:BigInt(new Date(event.block_time).getTime()),
+                timestamp: BigInt(new Date(event.block_time).getTime()),
                 txHash: event.tx_hash,
                 from: event.tx_from
             }
         } as Risk;
         risks.set(key, risk);
+        return risks;
+    }
+
+    async processRiskUpdatedEvent(event: DecodedLogEntry, risks: Map<string, Risk>): Promise<Map<string, Risk>> {
+        if (event.event_name !== 'LogRiskServiceRiskUpdated') {
+            throw new Error(`Invalid event type ${event.event_name}`);
+        }
+
+        logger.info(`Processing risk updated event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+        const data = this.decodeRiskServiceEvent(event);
+        if (data === null || data === undefined) {
+            logger.error(`Failed to decode event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+            return risks;
+        }
+        if (data.name !== 'LogRiskServiceRiskUpdated') {
+            throw new Error(`Invalid event name ${data.name}`);
+        }
+
+        const productNftId = data.args[0] as BigInt;
+        const riskId = data.args[1] as string;
+        const key = `${productNftId}_${riskId}`;
+        
+        const risk = risks.get(key);
+
+        if (risk === undefined) {
+            logger.error(`Risk not found ${key}`);
+            return risks;
+        }
+
+        risk.modified = {
+            blockNumber: event.block_number,
+            timestamp: BigInt(new Date(event.block_time).getTime()),
+            txHash: event.tx_hash,
+            from: event.tx_from
+        };
+
+        return risks;
+    }
+
+    async processRiskLockedEvent(event: DecodedLogEntry, risks: Map<string, Risk>): Promise<Map<string, Risk>> {
+        if (event.event_name !== 'LogRiskServiceRiskLocked') {
+            throw new Error(`Invalid event type ${event.event_name}`);
+        }
+
+        logger.info(`Processing risk locked event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+        const data = this.decodeRiskServiceEvent(event);
+        if (data === null || data === undefined) {
+            logger.error(`Failed to decode event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+            return risks;
+        }
+        if (data.name !== 'LogRiskServiceRiskLocked') {
+            throw new Error(`Invalid event name ${data.name}`);
+        }
+
+        const productNftId = data.args[0] as BigInt;
+        const riskId = data.args[1] as string;
+        const key = `${productNftId}_${riskId}`;
+        
+        const risk = risks.get(key);
+
+        if (risk === undefined) {
+            logger.error(`Risk not found ${key}`);
+            return risks;
+        }
+
+        risk.locked = true;
+        risk.modified = {
+            blockNumber: event.block_number,
+            timestamp: BigInt(new Date(event.block_time).getTime()),
+            txHash: event.tx_hash,
+            from: event.tx_from
+        };
+
+        return risks;
+    }
+
+    async processRiskUnlockedEvent(event: DecodedLogEntry, risks: Map<string, Risk>): Promise<Map<string, Risk>> {
+        if (event.event_name !== 'LogRiskServiceRiskUnlocked') {
+            throw new Error(`Invalid event type ${event.event_name}`);
+        }
+
+        logger.info(`Processing risk unlocked event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+        const data = this.decodeRiskServiceEvent(event);
+        if (data === null || data === undefined) {
+            logger.error(`Failed to decode event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+            return risks;
+        }
+        if (data.name !== 'LogRiskServiceRiskUnlocked') {
+            throw new Error(`Invalid event name ${data.name}`);
+        }
+
+        const productNftId = data.args[0] as BigInt;
+        const riskId = data.args[1] as string;
+        const key = `${productNftId}_${riskId}`;
+        
+        const risk = risks.get(key);
+
+        if (risk === undefined) {
+            logger.error(`Risk not found ${key}`);
+            return risks;
+        }
+
+        risk.locked = false;
+        risk.modified = {
+            blockNumber: event.block_number,
+            timestamp: BigInt(new Date(event.block_time).getTime()),
+            txHash: event.tx_hash,
+            from: event.tx_from
+        };
+
+        return risks;
+    }
+
+    async processRiskClosedEvent(event: DecodedLogEntry, risks: Map<string, Risk>): Promise<Map<string, Risk>> {
+        if (event.event_name !== 'LogRiskServiceRiskClosed') {
+            throw new Error(`Invalid event type ${event.event_name}`);
+        }
+
+        logger.info(`Processing risk closed event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+        const data = this.decodeRiskServiceEvent(event);
+        if (data === null || data === undefined) {
+            logger.error(`Failed to decode event ${event.tx_hash} - ${event.event_name} - ${event.data}`);
+            return risks;
+        }
+        if (data.name !== 'LogRiskServiceRiskClosed') {
+            throw new Error(`Invalid event name ${data.name}`);
+        }
+
+        const productNftId = data.args[0] as BigInt;
+        const riskId = data.args[1] as string;
+        const key = `${productNftId}_${riskId}`;
+        
+        const risk = risks.get(key);
+
+        if (risk === undefined) {
+            logger.error(`Risk not found ${key}`);
+            return risks;
+        }
+
+        risk.closed = true;
+        risk.modified = {
+            blockNumber: event.block_number,
+            timestamp: BigInt(new Date(event.block_time).getTime()),
+            txHash: event.tx_hash,
+            from: event.tx_from
+        };
+
         return risks;
     }
 

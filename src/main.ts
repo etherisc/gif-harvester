@@ -99,10 +99,18 @@ class Main {
                 case 'LogRiskServiceRiskCreated':
                     await this.riskProcessor.processRiskCreatedEvent(event, risks);
                     break;
-                // TODO: LogRiskServiceRiskUpdated
-                // TODO: LogRiskServiceRiskLocked
-                // TODO: LogRiskServiceRiskUnlocked
-                // TODO: LogRiskServiceRiskClosed
+                case 'LogRiskServiceRiskUpdated':
+                    await this.riskProcessor.processRiskUpdatedEvent(event, risks);
+                    break;
+                case 'LogRiskServiceRiskLocked':
+                    await this.riskProcessor.processRiskLockedEvent(event, risks);
+                    break;
+                case 'LogRiskServiceRiskUnlocked':
+                    await this.riskProcessor.processRiskUnlockedEvent(event, risks);
+                    break;
+                case 'LogRiskServiceRiskClosed':
+                    await this.riskProcessor.processRiskClosedEvent(event, risks);
+                    break;
                 case 'LogApplicationServiceApplicationCreated':
                     await this.policyProcessor.processApplicationCreatedEvent(event, policies);
                     break;
