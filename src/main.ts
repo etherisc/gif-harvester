@@ -16,6 +16,8 @@ import ComponentProcessor from './component_processor';
 import { Component } from './types/component';
 import RiskProcessor from './risk_processor';
 import { Risk } from './types/risk';
+import { Claim } from './types/claim';
+import { Payout } from './types/payout';
 
 dotenv.config();
 
@@ -44,13 +46,15 @@ class Main {
 
     public async main(): Promise<void> {
         const gifEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_GIF_EVENTS, 0);
-        const { nfts, instances, policies, components, risks } = await this.parseGifEvents(gifEvents);
+        const { nfts, instances, policies, components, risks, claims, payouts } = await this.parseGifEvents(gifEvents);
 
         await this.nftProcessor.persistNfts(Array.from(nfts.values()));
         await this.instanceProcessor.persistInstances(Array.from(instances.values()));
         await this.policyProcessor.persistPolicies(Array.from(policies.values()));
         await this.componentProcessor.persistComponents(Array.from(components.values()));
         await this.riskProcessor.persistRisks(Array.from(risks.values()));
+        await this.policyProcessor.persistClaims(Array.from(claims.values()));
+        await this.policyProcessor.persistPayouts(Array.from(payouts.values()));
 
         for (const nft of nfts.values()) {
             logger.info(`NFT: ${nft.nftId} - ${ObjectType[nft.objectType]} - ${nft.objectAddress} - ${nft.owner}`);
@@ -60,8 +64,20 @@ class Main {
             logger.info(`Instance: ${instance.nftId} - ${instance.instanceAddress}`);
         }
 
+        for (const risk of risks.values()) {
+            logger.info(`Risk: ${risk.productNftId} - ${risk.riskId} - ${risk.locked} - ${risk.closed}`);
+        }
+
         for (const policy of policies.values()) {
             logger.info(`Policy: ${policy.nftId} - ${policy.riskId} - ${policy.sumInsuredAmount}`);
+        }
+
+        for (const claim of claims.values()) {
+            logger.info(`Claim: ${claim.policyNftId} ${claim.claimId} - ${claim.claimAmount}`);
+        }
+
+        for (const payout of payouts.values()) {
+            logger.info(`Payout: ${payout.policyNftId} ${payout.payoutId} - ${payout.payoutAmount}`);
         }
     }
 
@@ -72,6 +88,8 @@ class Main {
             policies: Map<BigInt, Policy>,
             components: Map<BigInt, Component>,
             risks: Map<string, Risk>,
+            claims: Map<string, Claim>,
+            payouts: Map<string, Payout>,
         }> 
     {
         const nfts = new Map<BigInt, Nft>();
@@ -79,6 +97,8 @@ class Main {
         const components = new Map<BigInt, Component>();
         const risks = new Map<string, Risk>();
         const policies = new Map<BigInt, Policy>();
+        const claims = new Map<string, Claim>();
+        const payouts = new Map<string, Payout>();
 
         for (const event of gifEvents) {
             // logger.debug(`Processing gif event ${event.tx_hash} - ${event.block_number} - ${event.event_name}`);
@@ -126,13 +146,37 @@ class Main {
                 case 'LogPolicyServicePolicyClosed':
                     await this.policyProcessor.processPolicyClosedEvent(event, policies);
                     break;
+                case 'LogClaimServiceClaimSubmitted':
+                    await this.policyProcessor.processClaimSubmittedEvent(event, policies, claims);
+                    break;
+                case 'LogClaimServiceClaimConfirmed':
+                    await this.policyProcessor.processClaimConfirmedEvent(event, claims);
+                    break;
+                case 'LogClaimServiceClaimDeclined':
+                    await this.policyProcessor.processClaimDeclinedEvent(event, claims);
+                    break;
+                case 'LogClaimServiceClaimRevoked':
+                    await this.policyProcessor.processClaimRevokedEvent(event, claims);
+                    break;
+                case 'LogClaimServiceClaimCancelled':
+                    await this.policyProcessor.processClaimCancelledEvent(event, claims);
+                    break;
+                case 'LogClaimServicePayoutCreated':
+                    await this.policyProcessor.processPayoutCreatedEvent(event, policies, claims, payouts);
+                    break;
+                case 'LogClaimServicePayoutProcessed':
+                    await this.policyProcessor.processPayoutProcessedEvent(event, payouts);
+                    break;
+                case 'LogClaimServicePayoutCancelled':
+                    await this.policyProcessor.processPayoutCancelledEvent(event, payouts);
+                    break;
 
                 default:
                     logger.info('Unhandeled event: ' + event.event_name);
             }
         }
 
-        return { nfts, instances, policies, components, risks };
+        return { nfts, instances, policies, components, risks, claims, payouts };
     }
 }
 

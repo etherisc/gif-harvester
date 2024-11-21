@@ -87,3 +87,41 @@ model Risk {
   // compound primary key
   @@id([productNftId, riskId])
 }
+
+model Claim {
+  policyNftId           BigInt
+  claimId               BigInt
+  claimAmount           BigInt
+  confirmedAmount       BigInt
+  state                 Int
+  created_blockNumber   Int
+  created_timestamp     BigInt
+  created_txHash        String
+  created_from          String
+  modified_blockNumber  Int
+  modified_timestamp    BigInt
+  modified_txHash       String
+  modified_from         String
+
+  @@id([policyNftId, claimId])
+}
+
+model Payout {
+  policyNftId           BigInt
+  payoutId              BigInt
+  claimId               BigInt
+  beneficiary           String
+  payoutAmount          BigInt
+  paidAmount            BigInt
+  cancelled             Boolean
+  created_blockNumber   Int
+  created_timestamp     BigInt
+  created_txHash        String
+  created_from          String
+  modified_blockNumber  Int
+  modified_timestamp    BigInt
+  modified_txHash       String
+  modified_from         String
+
+  @@id([policyNftId, payoutId])
+}
