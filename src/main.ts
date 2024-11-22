@@ -18,6 +18,8 @@ import RiskProcessor from './risk_processor';
 import { Risk } from './types/risk';
 import { Claim } from './types/claim';
 import { Payout } from './types/payout';
+import { OracleRequest } from './types/oracle_request';
+import OracleProcessor from './oracle_processor';
 
 dotenv.config();
 
@@ -34,6 +36,7 @@ class Main {
     private policyProcessor: PolicyProcessor;
     private componentProcessor: ComponentProcessor;
     private riskProcessor: RiskProcessor;
+    private oracleProcessor: OracleProcessor;
 
     constructor(prisma: PrismaClient) {
         this.dune = new DuneApi();
@@ -42,11 +45,12 @@ class Main {
         this.componentProcessor = new ComponentProcessor(prisma);
         this.policyProcessor = new PolicyProcessor(prisma);
         this.riskProcessor = new RiskProcessor(prisma);
+        this.oracleProcessor = new OracleProcessor(prisma);
     }
 
     public async main(): Promise<void> {
         const gifEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_GIF_EVENTS, 0);
-        const { nfts, instances, policies, components, risks, claims, payouts } = await this.parseGifEvents(gifEvents);
+        const { nfts, instances, policies, components, risks, claims, payouts, requests } = await this.parseGifEvents(gifEvents);
 
         await this.nftProcessor.persistNfts(Array.from(nfts.values()));
         await this.instanceProcessor.persistInstances(Array.from(instances.values()));
@@ -55,6 +59,7 @@ class Main {
         await this.riskProcessor.persistRisks(Array.from(risks.values()));
         await this.policyProcessor.persistClaims(Array.from(claims.values()));
         await this.policyProcessor.persistPayouts(Array.from(payouts.values()));
+        await this.oracleProcessor.persistOracleRequests(Array.from(requests.values()));
 
         for (const nft of nfts.values()) {
             logger.info(`NFT: ${nft.nftId} - ${ObjectType[nft.objectType]} - ${nft.objectAddress} - ${nft.owner}`);
@@ -90,6 +95,7 @@ class Main {
             risks: Map<string, Risk>,
             claims: Map<string, Claim>,
             payouts: Map<string, Payout>,
+            requests: Map<BigInt, OracleRequest>
         }> 
     {
         const nfts = new Map<BigInt, Nft>();
@@ -99,6 +105,7 @@ class Main {
         const policies = new Map<BigInt, Policy>();
         const claims = new Map<string, Claim>();
         const payouts = new Map<string, Payout>();
+        const requests = new Map<BigInt, OracleRequest>();
 
         for (const event of gifEvents) {
             // logger.debug(`Processing gif event ${event.tx_hash} - ${event.block_number} - ${event.event_name}`);
@@ -110,12 +117,15 @@ class Main {
                 case 'LogRegistryObjectRegistered':
                     await this.nftProcessor.processNftRegistrationEvent(event, nfts);
                     break;
+
                 case 'LogInstanceServiceInstanceCreated':
                     await this.instanceProcessor.processInstanceServiceEvent(event, instances);
                     break;
+
                 case 'LogComponentServiceRegistered':
                     await this.componentProcessor.processComponentRegisteredEvent(event, components);
                     break;
+
                 case 'LogRiskServiceRiskCreated':
                     await this.riskProcessor.processRiskCreatedEvent(event, risks);
                     break;
@@ -131,6 +141,7 @@ class Main {
                 case 'LogRiskServiceRiskClosed':
                     await this.riskProcessor.processRiskClosedEvent(event, risks);
                     break;
+
                 case 'LogApplicationServiceApplicationCreated':
                     await this.policyProcessor.processApplicationCreatedEvent(event, policies);
                     break;
@@ -146,6 +157,7 @@ class Main {
                 case 'LogPolicyServicePolicyClosed':
                     await this.policyProcessor.processPolicyClosedEvent(event, policies);
                     break;
+
                 case 'LogClaimServiceClaimSubmitted':
                     await this.policyProcessor.processClaimSubmittedEvent(event, policies, claims);
                     break;
@@ -161,6 +173,7 @@ class Main {
                 case 'LogClaimServiceClaimCancelled':
                     await this.policyProcessor.processClaimCancelledEvent(event, claims);
                     break;
+
                 case 'LogClaimServicePayoutCreated':
                     await this.policyProcessor.processPayoutCreatedEvent(event, policies, claims, payouts);
                     break;
@@ -171,12 +184,28 @@ class Main {
                     await this.policyProcessor.processPayoutCancelledEvent(event, payouts);
                     break;
 
+                case 'LogOracleServiceRequestCreated':
+                    await this.oracleProcessor.processOracleRequestCreatedEvent(event, requests);
+                    break;
+                case 'LogOracleServiceResponseProcessed':
+                    await this.oracleProcessor.processOracleResponseProcessedEvent(event, requests);
+                    break;
+                case 'LogOracleServiceDeliveryFailed':
+                    await this.oracleProcessor.processOracleDeliveryFailedEvent(event, requests);
+                    break;
+                case 'LogOracleServiceResponseResent':
+                    await this.oracleProcessor.processOracleResponseResentEvent(event, requests);
+                    break;
+                case 'LogOracleServiceRequestCancelled':
+                    await this.oracleProcessor.processOracleRequestCancelledEvent(event, requests);
+                    break;
+
                 default:
                     logger.info('Unhandeled event: ' + event.event_name);
             }
         }
 
-        return { nfts, instances, policies, components, risks, claims, payouts };
+        return { nfts, instances, policies, components, risks, claims, payouts, requests };
     }
 }
 

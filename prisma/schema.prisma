@@ -125,3 +125,21 @@ model Payout {
 
   @@id([policyNftId, payoutId])
 }
+
+model OracleRequest {
+  requestId             BigInt       @id
+  oracleNftId           BigInt
+  requesterNftId        BigInt
+  expirationAt          BigInt
+  state                 Int
+  objectAddress         String?
+  functionSignature     String?
+  created_blockNumber   Int
+  created_timestamp     BigInt
+  created_txHash        String
+  created_from          String
+  modified_blockNumber  Int
+  modified_timestamp    BigInt
+  modified_txHash       String
+  modified_from         String
+}
