@@ -220,15 +220,30 @@ class Main {
                 case 'LogBundleServiceBundleClosed':
                     await this.bundleProcessor.processBundleClosedEvent(event, bundles);
                     break;
+                case 'LogBundleServiceBundleLocked':
+                    await this.bundleProcessor.processBundleLockedEvent(event, bundles);
+                    break;
+                case 'LogBundleServiceBundleUnlocked':
+                    await this.bundleProcessor.processBundleUnlockedEvent(event, bundles);
+                    break;
+                case 'LogBundleServiceBundleExtended':
+                    await this.bundleProcessor.processBundleExtendedEvent(event, bundles);
+                    break;
+                case 'LogBundleServiceCollateralLocked':
+                    await this.bundleProcessor.processCollateralLockedEvent(event, bundles);
+                    break;
+                case 'LogBundleServiceCollateralReleased':
+                    await this.bundleProcessor.processCollateralReleasedEvent(event, bundles);
+                    break;
+                case 'LogBundleServiceBundleStaked':
+                    await this.bundleProcessor.processBundleStakedEvent(event, bundles);
+                    break;
+                case 'LogBundleServiceBundleUnstaked':
+                    await this.bundleProcessor.processBundleUnstakedEvent(event, bundles);
+                    break;
 
-                // event LogBundleServiceBundleLocked(NftId bundleNftId);
-                // event LogBundleServiceBundleUnlocked(NftId bundleNftId);
-                // event LogBundleServiceBundleExtended(NftId bundleNftId, Seconds lifetimeExtension, Timestamp extendedExpiredAt);
+
                 // event LogBundleServiceBundleFeeUpdated(NftId bundleNftId, Amount fixedFee, UFixed fractionalFee);
-                // event LogBundleServiceCollateralLocked(NftId bundleNftId, NftId policyNftId, Amount collateralAmount);
-                // event LogBundleServiceCollateralReleased(NftId bundleNftId, NftId policyNftId, Amount collateralAmount);
-                // event LogBundleServiceBundleStaked(NftId bundleNftId, Amount amount);
-                // event LogBundleServiceBundleUnstaked(NftId bundleNftId, Amount amount);
 
                 // event LogPoolServiceMaxBalanceAmountUpdated(NftId poolNftId, Amount previousMaxCapitalAmount, Amount currentMaxCapitalAmount);
                 // event LogPoolServiceWalletFunded(NftId poolNftId, address poolOwner, Amount amount);
