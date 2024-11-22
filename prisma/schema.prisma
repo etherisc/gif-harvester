@@ -143,3 +143,21 @@ model OracleRequest {
   modified_txHash       String
   modified_from         String
 }
+
+model Bundle {
+  bundleNftId           BigInt       @id
+  poolNftId             BigInt
+  lifetime              BigInt
+  locked                Boolean      @default(false)
+  closed                Boolean      @default(false)
+  balance               BigInt
+  lockedAmount          BigInt
+  created_blockNumber   Int
+  created_timestamp     BigInt
+  created_txHash        String
+  created_from          String
+  modified_blockNumber  Int
+  modified_timestamp    BigInt
+  modified_txHash       String
+  modified_from         String
+}

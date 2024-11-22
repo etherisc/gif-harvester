@@ -20,6 +20,8 @@ import { Claim } from './types/claim';
 import { Payout } from './types/payout';
 import { OracleRequest } from './types/oracle_request';
 import OracleProcessor from './oracle_processor';
+import BundleProcessor from './bundle_processor';
+import { Bundle } from './types/bundle';
 
 dotenv.config();
 
@@ -37,6 +39,7 @@ class Main {
     private componentProcessor: ComponentProcessor;
     private riskProcessor: RiskProcessor;
     private oracleProcessor: OracleProcessor;
+    private bundleProcessor: BundleProcessor;
 
     constructor(prisma: PrismaClient) {
         this.dune = new DuneApi();
@@ -46,11 +49,15 @@ class Main {
         this.policyProcessor = new PolicyProcessor(prisma);
         this.riskProcessor = new RiskProcessor(prisma);
         this.oracleProcessor = new OracleProcessor(prisma);
+        this.bundleProcessor = new BundleProcessor(prisma);
     }
 
     public async main(): Promise<void> {
         const gifEvents = await this.dune.getLatestResult(DUNE_QUERY_ID_GIF_EVENTS, 0);
-        const { nfts, instances, policies, components, risks, claims, payouts, requests } = await this.parseGifEvents(gifEvents);
+        const { 
+            nfts, instances, policies, components, 
+            risks, claims, payouts, requests, bundles 
+        } = await this.parseGifEvents(gifEvents);
 
         await this.nftProcessor.persistNfts(Array.from(nfts.values()));
         await this.instanceProcessor.persistInstances(Array.from(instances.values()));
@@ -60,6 +67,7 @@ class Main {
         await this.policyProcessor.persistClaims(Array.from(claims.values()));
         await this.policyProcessor.persistPayouts(Array.from(payouts.values()));
         await this.oracleProcessor.persistOracleRequests(Array.from(requests.values()));
+        await this.bundleProcessor.persistBundles(Array.from(bundles.values()));
 
         for (const nft of nfts.values()) {
             logger.info(`NFT: ${nft.nftId} - ${ObjectType[nft.objectType]} - ${nft.objectAddress} - ${nft.owner}`);
@@ -84,6 +92,10 @@ class Main {
         for (const payout of payouts.values()) {
             logger.info(`Payout: ${payout.policyNftId} ${payout.payoutId} - ${payout.payoutAmount}`);
         }
+
+        for (const bundle of bundles.values()) {
+            logger.info(`Bundle: ${bundle.bundleNftId} - ${bundle.balance} - ${bundle.lockedAmount}`);
+        }
     }
 
     async parseGifEvents(gifEvents: Array<DecodedLogEntry>)
@@ -95,7 +107,8 @@ class Main {
             risks: Map<string, Risk>,
             claims: Map<string, Claim>,
             payouts: Map<string, Payout>,
-            requests: Map<BigInt, OracleRequest>
+            requests: Map<BigInt, OracleRequest>,
+            bundles: Map<BigInt, Bundle>
         }> 
     {
         const nfts = new Map<BigInt, Nft>();
@@ -106,6 +119,7 @@ class Main {
         const claims = new Map<string, Claim>();
         const payouts = new Map<string, Payout>();
         const requests = new Map<BigInt, OracleRequest>();
+        const bundles = new Map<BigInt, Bundle>();
 
         for (const event of gifEvents) {
             // logger.debug(`Processing gif event ${event.tx_hash} - ${event.block_number} - ${event.event_name}`);
@@ -200,12 +214,44 @@ class Main {
                     await this.oracleProcessor.processOracleRequestCancelledEvent(event, requests);
                     break;
 
+                case 'LogBundleServiceBundleCreated':
+                    await this.bundleProcessor.processBundleCreatedEvent(event, bundles);
+                    break;
+                case 'LogBundleServiceBundleClosed':
+                    await this.bundleProcessor.processBundleClosedEvent(event, bundles);
+                    break;
+
+                // event LogBundleServiceBundleLocked(NftId bundleNftId);
+                // event LogBundleServiceBundleUnlocked(NftId bundleNftId);
+                // event LogBundleServiceBundleExtended(NftId bundleNftId, Seconds lifetimeExtension, Timestamp extendedExpiredAt);
+                // event LogBundleServiceBundleFeeUpdated(NftId bundleNftId, Amount fixedFee, UFixed fractionalFee);
+                // event LogBundleServiceCollateralLocked(NftId bundleNftId, NftId policyNftId, Amount collateralAmount);
+                // event LogBundleServiceCollateralReleased(NftId bundleNftId, NftId policyNftId, Amount collateralAmount);
+                // event LogBundleServiceBundleStaked(NftId bundleNftId, Amount amount);
+                // event LogBundleServiceBundleUnstaked(NftId bundleNftId, Amount amount);
+
+                // event LogPoolServiceMaxBalanceAmountUpdated(NftId poolNftId, Amount previousMaxCapitalAmount, Amount currentMaxCapitalAmount);
+                // event LogPoolServiceWalletFunded(NftId poolNftId, address poolOwner, Amount amount);
+                // event LogPoolServiceWalletDefunded(NftId poolNftId, address poolOwner, Amount amount);
+                // event LogPoolServiceBundleCreated(NftId instanceNftId, NftId poolNftId, NftId bundleNftId);
+                // event LogPoolServiceBundleClosed(NftId instanceNftId, NftId poolNftId, NftId bundleNftId);
+                // event LogPoolServiceBundleStaked(NftId instanceNftId, NftId poolNftId, NftId bundleNftId, Amount amount, Amount netAmount);
+                // event LogPoolServiceBundleUnstaked(NftId instanceNftId, NftId poolNftId, NftId bundleNftId, Amount amount, Amount netAmount);
+                // event LogPoolServiceFeesWithdrawn(NftId bundleNftId, address recipient, address tokenAddress, Amount amount);
+                // event LogPoolServiceProcessFundedClaim(NftId policyNftId, ClaimId claimId, Amount availableAmount);
+                // event LogPoolServiceApplicationVerified(NftId poolNftId, NftId bundleNftId, NftId applicationNftId, Amount totalCollateralAmount);
+                // event LogPoolServiceCollateralLocked(NftId poolNftId, NftId bundleNftId, NftId applicationNftId, Amount totalCollateralAmount, Amount lockedCollateralAmount);
+                // event LogPoolServiceCollateralReleased(NftId bundleNftId, NftId policyNftId, Amount remainingCollateralAmount);
+                // event LogPoolServiceSaleProcessed(NftId poolNftId, NftId bundleNftId, Amount bundleNetAmount, Amount bundleFeeAmount, Amount poolFeeAmount);
+                // event LogPoolServicePayoutProcessed(NftId poolNftId, NftId bundleNftId, NftId policyNftId, PayoutId payoutId, Amount netPayoutAmount, Amount processingFeeAmount, address payoutBeneficiary);
+
+
                 default:
                     logger.info('Unhandeled event: ' + event.event_name);
             }
         }
 
-        return { nfts, instances, policies, components, risks, claims, payouts, requests };
+        return { nfts, instances, policies, components, risks, claims, payouts, requests, bundles };
     }
 }
 

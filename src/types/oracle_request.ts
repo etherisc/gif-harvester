@@ -1,4 +1,3 @@
-import { ObjectType } from "./objecttype";
 
 export interface OracleRequest {
     oracleNftId: bigint;
