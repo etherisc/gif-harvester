@@ -22,7 +22,7 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^6.0.0",
     "@types/express": "^5",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
