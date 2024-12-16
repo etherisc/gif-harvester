@@ -16,7 +16,7 @@
   "devDependencies": {
     "@etherisc/gif-next": "3.0.0-8200b30-160",
     "@typechain/ethers-v6": "^0.5.1",
-    "@types/node": "^20.12.12",
+    "@types/node": "^22.10.2",
     "ts-node-dev": "^2.0.0",
     "typechain": "^8.3.2",
     "typescript": "^5.4.5"
